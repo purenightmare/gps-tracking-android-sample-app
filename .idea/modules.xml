@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/GpsLoc.iml" filepath="$PROJECT_DIR$/GpsLoc.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="gps-tracking-android-sample-app/app" />
+      <module fileurl="file://$PROJECT_DIR$/gps-tracking-android-sample-app.iml" filepath="$PROJECT_DIR$/gps-tracking-android-sample-app.iml" group="gps-tracking-android-sample-app" />
     </modules>
   </component>
 </project>
