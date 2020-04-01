@@ -10,6 +10,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.app.Service;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
@@ -17,19 +18,18 @@ import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
-/**
- * Created by Duke on 9/7/2015.
- */
+
 public class GPSTracker extends Service implements LocationListener {
     private final Context mContext;
-
-
-    boolean isGPSEnabled = false;
-
-
-    boolean isNetworkEnabled = false;
-
+    String mPath;
+    boolean isGPSEnabled = false;    //for gps
+    boolean isNetworkEnabled = false;//if only for gps , this bool can be unused
 
     boolean canGetLocation = false;
 
@@ -38,21 +38,20 @@ public class GPSTracker extends Service implements LocationListener {
     double longitude;
 
 
-    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10;
-
-
-    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1;
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 0;//examine the dist for 0 m
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 1;// examine the time for 1000 ms
 
 
     protected LocationManager locationManager;
 
-    public GPSTracker(Context context) {
-        Log.i("init","init");
+    public GPSTracker(Context context,String path) {//init the gps tracker
+        Log.d("init","init");
         this.mContext = context;
-        getLocation();
+        this.mPath = path;
+        startLocationMethod();
     }
 
-    public Location getLocation() {
+    public Location startLocationMethod() {
         try {
             locationManager = (LocationManager) mContext
                     .getSystemService(LOCATION_SERVICE);
@@ -61,7 +60,7 @@ public class GPSTracker extends Service implements LocationListener {
             isGPSEnabled = locationManager
                     .isProviderEnabled(LocationManager.GPS_PROVIDER);
 
-
+            //if gps are only used,network methods can  be shut down
             isNetworkEnabled = locationManager
                     .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
@@ -70,7 +69,7 @@ public class GPSTracker extends Service implements LocationListener {
             } else {
                 this.canGetLocation = true;
 
-                if (isNetworkEnabled) {
+                if (isGPSEnabled) {
                     if (ActivityCompat.checkSelfPermission(this.mContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this.mContext, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         // TODO: Consider calling
                         //    ActivityCompat#requestPermissions
@@ -79,39 +78,38 @@ public class GPSTracker extends Service implements LocationListener {
                         //                                          int[] grantResults)
                         // to handle the case where the user grants the permission. See the documentation
                         // for ActivityCompat#requestPermissions for more details.
+                        showSettingsAlert();
                         Log.d("ERRNO","permission failure~!");
                         return location;
                     }
                     locationManager.requestLocationUpdates(
-                            LocationManager.NETWORK_PROVIDER,
+                            LocationManager.GPS_PROVIDER,
                             MIN_TIME_BW_UPDATES,
                             MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                        Log.d("Network", "Network");
                     if (locationManager != null) {
                         location = locationManager
-                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
                         if (location != null) {
                             latitude = location.getLatitude();
                             longitude = location.getLongitude();
-                            Log.d("Internet","Location accept.");
+                            Log.d("GPS","Location accept.");
                         }
                     }
                 }
 
-                if (isGPSEnabled) {
+                if (isNetworkEnabled) {
                     if (location == null) {
                         locationManager.requestLocationUpdates(
-                                LocationManager.GPS_PROVIDER,
+                                LocationManager.NETWORK_PROVIDER,
                                 MIN_TIME_BW_UPDATES,
                                 MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
-                        Log.d("GPS Enabled", "GPS Enabled");
                         if (locationManager != null) {
                             location = locationManager
-                                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                                    .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                             if (location != null) {
                                 latitude = location.getLatitude();
                                 longitude = location.getLongitude();
-                                Log.d("GPS","Location accept.");
+                                Log.d("Internet","Location accept.");
                             }
                         }
                     }
@@ -200,8 +198,27 @@ public class GPSTracker extends Service implements LocationListener {
 
         double lat = location.getLatitude();
         double longi = location.getLongitude();
+
         Toast.makeText(mContext, "My Location is \n" + lat + "\n" + longi, Toast.LENGTH_SHORT).show();
-        getLocation();
+
+        try {
+            File file = new File(mPath);
+            Log.d("location",file.getPath());
+            if(!file.exists())
+            {
+                file.createNewFile();
+            }
+            OutputStream out = new FileOutputStream(file);
+            String outputString = String.valueOf(System.currentTimeMillis())+" "+String.valueOf(lat)+" "+String.valueOf(longi)+"\n";
+            out.write(outputString.getBytes());
+            out.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //startLocationMethod();
 
     }
 
